@@ -38,6 +38,12 @@ class Request extends Model
         return $this->hasOne(Document::class);
     }
 
+    public function etape_processus()
+{
+    return $this->hasOne(EtapeProcessus::class, 'etape_processus_id');
+}
+
+
     public function documents()
     {
         return $this->hasMany(Document::class);

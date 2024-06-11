@@ -189,7 +189,7 @@
                                                     </ul>
                                                 </div>
                                             @endif
-                                            <form method="POST" action="{{ route('demande.submit') }}" enctype="multipart/form-data">
+                                            <form method="GET" action="{{ route('demande.submit') }}" enctype="multipart/form-data">
                                                 @csrf
                                                 <div class="form-group row">
                                                     <div class="col-sm-3 mb-3 mb-sm-0">

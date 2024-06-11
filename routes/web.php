@@ -22,6 +22,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/admin_dashboard', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
     Route::get('/user/dashboard', [DashboardController::class, 'userDashboard'])->name('user.dashboard');
     Route::get('/flexible-analysis', [RequestController::class, 'flexibleAnalysis'])->name('request.flexibleAnalysis');
+    Route::get('/analyse/etapes', [RequestController::class, 'analyseEtapes'])->name('analyse.etapes');
+
 });
 
 // Route pour le tableau de bord public (ou utilisateur standard)
@@ -45,6 +47,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 // Routes resource pour gérer toutes les actions CRUD de base pour les demandes
 Route::middleware(['auth'])->group(function () {
     Route::resource('demande', RequestController::class);
+
 });
 
 Route::get('/home', [PublicController::class, 'home'])->name('home');

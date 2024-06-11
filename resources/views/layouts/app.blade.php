@@ -89,6 +89,7 @@
                         <div class="bg-white py-2 collapse-inner rounded">
                             <a class="collapse-item" href="{{ route('demande.index') }}"><b>Liste des demandes</b></a>
                             <a class="collapse-item" href="{{ route('analysis') }}"> <b>Analyse Flexible</b></a>
+                            <a class="collapse-item" href="{{ route('analyse.etapes') }}"> <b>Processus</b></a>
                         </div>
                     </div>
                 </li>

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Comment;
 use App\Models\EtablissementType;
+use App\Models\EtapeProcessus;
 use App\Models\RequestType;
 use App\Models\User;
 use App\Models\Region; // Ajout du modèle Region
@@ -25,6 +26,7 @@ class RequestController extends Controller
 
     public function __construct()
     {
+
         // Appliquer le middleware auth et le middleware de redirection si l'utilisateur n'est pas authentifié
     }
 
@@ -335,6 +337,52 @@ public function store(Request $request)
          // Retourner la vue avec les données nécessaires
          return view('admin.flexible_analysis', compact('demandes', 'regions', 'prefectures', 'regionId', 'prefectureId'));
      }
+
+     public function analyseEtapes()
+     {
+         try {
+             // Récupérer les données des étapes de processus depuis la base de données
+             $etapes = EtapeProcessus::all();
+
+             // Initialiser les tableaux pour stocker les différentes données
+             $dureesMoyennes = [];
+             $status = [];
+             $retards = [];
+             $tauxReussite = [];
+
+             // Calculer les différentes données pour chaque étape
+             foreach ($etapes as $etape) {
+                 // Récupérer les données de l'étape
+                 $etapeName = $etape->etape;
+                 $duree = $etape->duree;
+                 $status[$etapeName] = $etape->status;
+                 $retards[$etapeName] = $etape->retard;
+
+                 // Calculer le taux de réussite (hypothétique ici)
+                 // Vous devez implémenter votre propre logique pour calculer le taux de réussite
+                 // Ici, je l'ai mis à 0 pour un exemple, vous devez l'adapter à votre application
+                 $tauxReussite[$etapeName] = 0;
+
+                 // Stocker la durée moyenne pour cette étape dans le tableau
+                 $dureesMoyennes[$etapeName] = $duree;
+             }
+
+             // Passer les données à la vue pour affichage
+             return view('admin.demande.etapes', [
+                 'dureesMoyennes' => $dureesMoyennes,
+                 'statuts' => $status, // Assurez-vous de passer $status sous le nom 'statuts'
+                 'retards' => $retards,
+                 'tauxReussite' => $tauxReussite,
+                 'nombreTotalEtapes' => count($etapes), // Vous pouvez utiliser count() pour obtenir le nombre total d'étapes
+                 // Autres données nécessaires à transmettre à la vue...
+             ]);
+         } catch (\Exception $e) {
+             // En cas d'erreur, afficher un message d'erreur
+             return back()->withError("Une erreur s'est produite lors de l'analyse des étapes.");
+         }
+     }
+
+
 
 }
 
