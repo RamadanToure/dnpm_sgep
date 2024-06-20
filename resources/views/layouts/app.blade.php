@@ -90,6 +90,7 @@
                             <a class="collapse-item" href="{{ route('demande.index') }}"><b>Liste des demandes</b></a>
                             <a class="collapse-item" href="{{ route('analysis') }}"> <b>Analyse Flexible</b></a>
                             <a class="collapse-item" href="{{ route('analyse.etapes') }}"> <b>Processus</b></a>
+                            <a class="collapse-item" href="#"> <b>Authentification Diplome</b></a>
                         </div>
                     </div>
                 </li>
