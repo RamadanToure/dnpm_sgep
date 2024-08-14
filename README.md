@@ -76,3 +76,14 @@ $user->email = 'amaratoure@gmail.com';
 $user->password = Hash::make('password');
 $user->role = 'admin';
 $user->save();
+
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+$user = new User();
+$user->name = 'Admin';
+$user->email = 'koumamiana@gmail.com';
+$user->password = Hash::make('Diabate@24');
+$user->role = 'admin';
+$user->save();
