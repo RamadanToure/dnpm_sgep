@@ -133,32 +133,41 @@ public function index(Request $request)
     }
 
     // Enregistre une nouvelle demande
-// Enregistre une nouvelle demande
-public function store(Request $request)
-{
-    $request->validate([
-        'nom' => 'required|string|max:255',
-        'email' => 'required|email',
-        'prenoms' => 'required|string|max:255',
-        'contact' => 'required|string|max:255',
-        'etablissement_type_id' => 'required',
-        'region_id' => 'required',
-        'prefecture_id' => 'required',
-    ]);
+    // Enregistre une nouvelle demande
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nom' => 'required|string|max:255',
+            'email' => 'required|email',
+            'prenoms' => 'required|string|max:255',
+            'contact' => 'required|string|max:255',
+            'etablissement_type_id' => 'required',
+            'region_id' => 'required',
+            'prefecture_id' => 'required',
+        ], [
+            'nom.required' => 'Le champ nom est obligatoire.',
+            'email.required' => 'Le champ email est obligatoire.',
+            'prenoms.required' => 'Le champ prénom est obligatoire.',
+            'contact.required' => 'Le champ contact est obligatoire.',
+            'etablissement_type_id.required' => 'Le champ type d\'établissement est obligatoire.',
+            'region_id.required' => 'Le champ région est obligatoire.',
+            'prefecture_id.required' => 'Le champ préfecture est obligatoire.',
+        ]);
 
-    $demande = new Demande($request->all());
-    $demande->user_id = Auth::id();
-    $demande->save();
 
-    // Vérifiez le rôle de l'utilisateur connecté
-    if (Auth::user()->isAdmin()) {
-        // Si l'utilisateur est un administrateur, redirigez-le vers la vue index pour l'administrateur
-        return redirect()->route('admin.dashboard')->with('success', 'Demande soumise avec succès !');
-    } else {
-        // Sinon, redirigez-le vers le tableau de bord de l'utilisateur
-        return redirect()->route('user.dashboard')->with('success', 'Demande soumise avec succès !');
+        $demande = new Demande($request->all());
+        $demande->user_id = Auth::id();
+        $demande->save();
+
+        // // Vérifiez le rôle de l'utilisateur connecté
+        // if (Auth::user()->isAdmin()) {
+        //     // Si l'utilisateur est un administrateur, redirigez-le vers la vue index pour l'administrateur
+        //     return redirect()->route('admin.dashboard')->with('success', 'Demande soumise avec succès !');
+        // } else {
+        //     // Sinon, redirigez-le vers le tableau de bord de l'utilisateur
+        //     return redirect()->route('user.dashboard')->with('success', 'Demande soumise avec succès !');
+        // }
     }
-}
 
 
     // Traiter une demande
