@@ -3,140 +3,129 @@
 namespace App\Http\Controllers;
 
 use App\Mail\AccuseReceptionMail;
-use App\Http\Controllers\Controller;
 use App\Models\Document;
-use Illuminate\Http\Request;
-use App\Models\Request as Demande; // Renommer le modèle Request pour éviter les conflits
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Request as Demande;
 use App\Models\Comment;
 use App\Models\EtablissementType;
 use App\Models\EtapeProcessus;
 use App\Models\RequestType;
 use App\Models\User;
-use App\Models\Region; // Ajout du modèle Region
-use App\Models\Prefecture; // Ajout du modèle Prefecture
-use Illuminate\Auth\Middleware\Authenticate as MiddlewareAuthenticate;
-
-
+use App\Models\Region;
+use App\Models\Prefecture;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class RequestController extends Controller
 {
+    protected $regions;
+    protected $prefectures;
 
     public function __construct()
     {
+        $this->middleware('auth');
 
-        // Appliquer le middleware auth et le middleware de redirection si l'utilisateur n'est pas authentifié
+        // Assurez-vous que les modèles Region et Prefecture existent et sont correctement importés.
+        $this->regions = Region::pluck('name', 'id');
+        $this->prefectures = Prefecture::pluck('name', 'id');
     }
 
-// Analyse des demandes par région et préfecture
-public function analysis(Request $request)
-{
-     // Récupération des régions et préfectures pour les options de sélection
-     $regions = Region::pluck('name', 'id');
-     $prefectures = Prefecture::pluck('name', 'id');
 
-     // Récupération des paramètres de recherche
-     $regionId = $request->input('region_id');
-     $prefectureId = $request->input('prefecture_id');
+    // Analyse des demandes par région et préfecture
+    public function analysis(Request $request)
+    {
+        $regionId = $request->input('region_id');
+        $prefectureId = $request->input('prefecture_id');
 
+        $query = Demande::query();
 
-    $query = \App\Models\Request::query();
+        if ($regionId) {
+            $query->where('region_id', $regionId);
+        }
 
-    if ($regionId) {
-        $query->where('region_id', $regionId);
+        if ($prefectureId) {
+            $query->where('prefecture_id', $prefectureId);
+        }
+
+        $demandes = $query->paginate(10);
+
+        return view('admin.flexible_analysis', [
+            'demandes' => $demandes,
+            'regions' => $this->regions,
+            'prefectures' => $this->prefectures,
+        ]);
     }
 
-    if ($prefectureId) {
-        $query->where('prefecture_id', $prefectureId);
+    // Liste les demandes avec filtrage
+    public function index(Request $request)
+    {
+        $typeEtablissement = $request->input('etablissement_type');
+        $status = $request->input('status');
+        $search = $request->input('search');
+        $telephone = $request->input('telephone');
+        $region = $request->input('region');
+        $prefecture = $request->input('prefecture');
+
+        $query = Demande::query();
+
+        if ($typeEtablissement) {
+            $query->where('etablissement_type_id', $typeEtablissement);
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('nom', 'like', '%' . $search . '%')
+                  ->orWhere('prenoms', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($telephone) {
+            $query->where('contact', 'like', '%' . $telephone . '%');
+        }
+
+        if ($region) {
+            $query->whereHas('region', function ($q) use ($region) {
+                $q->where('name', $region);
+            });
+        }
+
+        if ($prefecture) {
+            $query->whereHas('prefecture', function ($q) use ($prefecture) {
+                $q->where('name', $prefecture);
+            });
+        }
+
+        $demandes = $query->paginate(10);
+
+        return view('admin.demande.index', [
+            'demandes' => $demandes,
+            'requestTypes' => RequestType::all(),
+            'etablissementTypes' => EtablissementType::all(),
+            'regions' => $this->regions,
+            'prefectures' => $this->prefectures,
+        ]);
     }
-
-    $flexibleAnalysisResults = $query->get();
-    $etablissements = $query->get();
-    $regions = \App\Models\Region::select('name')->distinct()->pluck('name'); // Sélection de la colonne 'name' pour les régions
-    $prefectures = \App\Models\Prefecture::select('name')->distinct()->pluck('name'); // Sélection de la colonne 'name' pour les préfectures
-
-    // Exécution de la requête
-    $demandes = $query->paginate(10);
-
-    return view('admin.flexible_analysis', compact('flexibleAnalysisResults', 'etablissements', 'regions', 'prefectures'));
-}
-
-public function index(Request $request)
-{
-    $typeEtablissement = $request->input('etablissement_type');
-    $status = $request->input('status');
-    $search = $request->input('search'); // Ajout de la recherche par nom et prénom
-    $telephone = $request->input('telephone'); // Ajout de la recherche par téléphone
-    $region = $request->input('region'); // Ajout de la recherche par région
-    $prefecture = $request->input('prefecture'); // Ajout de la recherche par préfecture
-
-    $query = \App\Models\Request::query(); // Utilisation du nom complet du modèle
-
-    if ($typeEtablissement) {
-        $query->where('etablissement_type_id', $typeEtablissement);
-    }
-
-    if ($status) {
-        $query->where('status', $status);
-    }
-
-    if ($search) {
-        // Recherche par nom ou prénom
-        $query->where(function ($q) use ($search) {
-            $q->where('nom', 'like', '%' . $search . '%')
-                ->orWhere('prenoms', 'like', '%' . $search . '%');
-        });
-    }
-
-    if ($telephone) {
-        // Recherche par numéro de téléphone
-        $query->where('contact', 'like', '%' . $telephone . '%');
-    }
-
-    if ($region) {
-        // Filtrer par région si une région est spécifiée
-        $query->whereHas('region', function ($q) use ($region) {
-            $q->where('name', $region); // Utilisation de la colonne 'name' pour la condition
-        });
-    }
-
-    if ($prefecture) {
-        // Filtrer par préfecture si une préfecture est spécifiée
-        $query->whereHas('prefecture', function ($q) use ($prefecture) {
-            $q->where('name', $prefecture); // Utilisation de la colonne 'name' pour la condition
-        });
-    }
-
-    $demandes = $query->paginate(10);
-
-    $requestTypes = \App\Models\RequestType::all();
-    $etablissementTypes = \App\Models\EtablissementType::all();
-    $regions = \App\Models\Region::all();
-    $prefectures = \App\Models\Prefecture::all();
-
-    return view('admin.demande.index', compact('demandes', 'requestTypes', 'etablissementTypes', 'regions', 'prefectures'));
-}
 
     // Affiche le formulaire de création de demande
     public function create()
     {
-
-
-        $requestTypes = RequestType::all();
-        $etablissementTypes = EtablissementType::all();
-
-        $regions = Region::all(); // Assurez-vous d'importer le modèle Region
-        $prefectures = Prefecture::all(); // Assurez-vous d'importer le modèle Prefecture
-        return view('admin.demande.create', compact('requestTypes', 'etablissementTypes', 'regions', 'prefectures'));
+        return view('admin.demande.create', [
+            'requestTypes' => RequestType::all(),
+            'etablissementTypes' => EtablissementType::all(),
+            'regions' => $this->regions,
+            'prefectures' => $this->prefectures,
+        ]);
     }
 
     // Enregistre une nouvelle demande
-    // Enregistre une nouvelle demande
     public function store(Request $request)
     {
-        $request->validate([
+        $validatedData = $request->validate([
             'nom' => 'required|string|max:255',
             'email' => 'required|email',
             'prenoms' => 'required|string|max:255',
@@ -144,43 +133,26 @@ public function index(Request $request)
             'etablissement_type_id' => 'required',
             'region_id' => 'required',
             'prefecture_id' => 'required',
-        ], [
-            'nom.required' => 'Le champ nom est obligatoire.',
-            'email.required' => 'Le champ email est obligatoire.',
-            'prenoms.required' => 'Le champ prénom est obligatoire.',
-            'contact.required' => 'Le champ contact est obligatoire.',
-            'etablissement_type_id.required' => 'Le champ type d\'établissement est obligatoire.',
-            'region_id.required' => 'Le champ région est obligatoire.',
-            'prefecture_id.required' => 'Le champ préfecture est obligatoire.',
         ]);
 
-
-        $demande = new Demande($request->all());
+        $demande = new Demande($validatedData);
         $demande->user_id = Auth::id();
         $demande->save();
 
-        // // Vérifiez le rôle de l'utilisateur connecté
-        // if (Auth::user()->isAdmin()) {
-        //     // Si l'utilisateur est un administrateur, redirigez-le vers la vue index pour l'administrateur
-        //     return redirect()->route('admin.dashboard')->with('success', 'Demande soumise avec succès !');
-        // } else {
-        //     // Sinon, redirigez-le vers le tableau de bord de l'utilisateur
-        //     return redirect()->route('user.dashboard')->with('success', 'Demande soumise avec succès !');
-        // }
+        return redirect()->route('demande.index')->with('success', 'Demande créée avec succès.');
     }
-
 
     // Traiter une demande
     public function traiter(Request $request, $id)
     {
         $demande = Demande::findOrFail($id);
 
-        $request->validate([
+        $validatedData = $request->validate([
             'status' => 'required|string|in:en_attente,traitee,refusee',
             'commentaire' => 'nullable|string|max:1000',
         ]);
 
-        $demande->update($request->only('status', 'commentaire'));
+        $demande->update($validatedData);
 
         return redirect()->route('demande.show', $demande->id)->with('success', 'Demande traitée avec succès !');
     }
@@ -188,32 +160,23 @@ public function index(Request $request)
     // Affiche les détails d'une demande spécifique
     public function show(Demande $demande)
     {
-        $utilisateurs = User::all();
-        return view('admin.demande.show', compact('demande', 'utilisateurs'));
+        return view('admin.demande.show', [
+            'demande' => $demande,
+            'utilisateurs' => User::all(),
+        ]);
     }
 
     // Affiche le formulaire pour éditer une demande
-    public function edit(Request $request, $id)
+    public function edit($id)
     {
         $demande = Demande::findOrFail($id);
         return view('admin.demande.edit', compact('demande'));
     }
 
-    // Ajoute un commentaire à une demande
-    public function commenter(Request $request, $id)
-    {
-        $request->validate([
-            'commentaire' => $request->commentaire,
-            'demande_id' => $id,
-        ]);
-
-        return redirect()->route('demande.show', $id)->with('success', 'Commentaire ajouté avec succès !');
-    }
-
     // Met à jour une demande existante
     public function update(Request $request, Demande $demande)
     {
-        $request->validate([
+        $validatedData = $request->validate([
             'nom' => 'required|string|max:255',
             'email' => 'required|email',
             'prenoms' => 'required|string|max:255',
@@ -223,7 +186,7 @@ public function index(Request $request)
             'prefecture_id' => 'required',
         ]);
 
-        $demande->update($request->all());
+        $demande->update($validatedData);
 
         return redirect()->route('demande.show', $demande->id)->with('success', 'Demande mise à jour avec succès !');
     }
@@ -243,23 +206,26 @@ public function index(Request $request)
 
         foreach ($selectedIds as $demandeId) {
             $demande = Demande::findOrFail($demandeId);
-            if ($action === 'approve') {
-                $demande->update(['status' => 'approuvé']);
-            } elseif ($action === 'reject') {
-                $demande->update(['status' => 'rejeté']);
-            } elseif ($action === 'delete') {
-                $demande->delete();
+            switch ($action) {
+                case 'approve':
+                    $demande->update(['status' => 'approuvé']);
+                    break;
+                case 'reject':
+                    $demande->update(['status' => 'rejeté']);
+                    break;
+                case 'delete':
+                    $demande->delete();
+                    break;
             }
         }
 
-        return redirect()->route('demande.index')->with('success', 'Actions groupées effectuées avec succès');
+        return redirect()->route('demande.index')->with('success', 'Actions groupées effectuées avec succès.');
     }
 
     // Soumission de demande avec envoi d'email
     public function submit(Request $request)
     {
-        // Validation des données
-        $request->validate([
+        $validatedData = $request->validate([
             'etablissement_type_id' => 'required',
             'nomPrenoms' => 'required|string|max:255',
             'contact' => 'required|string|max:255',
@@ -267,131 +233,85 @@ public function index(Request $request)
             'nom' => 'required|string|max:255',
             'region_id' => 'required',
             'prefecture_id' => 'required',
-            'documents.*' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048'
+            'documents.*' => 'required|file|mimes:pdf,doc,docx,jpg,png|max:2048',
         ]);
 
-        // Récupération de l'utilisateur connecté
-        $user_id = Auth::id();
-
-        // Création de la demande
-        $demande = new Demande($request->all());
-        $demande->user_id = $user_id;
+        $demande = new Demande($validatedData);
+        $demande->user_id = Auth::id();
         $demande->save();
 
-        // Enregistrement des documents associés à la demande
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {
                 $path = $file->store('documents', 'public');
-                $document = new Document();
-                $document->request_id = $demande->id;
-                $document->file_path = $path;
-                $document->save();
+                Document::create([
+                    'request_id' => $demande->id,
+                    'file_path' => $path,
+                ]);
             }
         }
 
-        // Envoi de l'accusé de réception par email
         try {
-            // Mail::to($demande->email)->send(new AccuseReceptionMail($demande));
+            Mail::to($demande->email)->send(new AccuseReceptionMail($demande));
         } catch (\Exception $e) {
-            // En cas d'erreur lors de l'envoi de l'email, enregistrement de la demande en attente
             DB::table('demandes_en_attente')->insert([
-                'etablissement_type' => $demande->etablissement_type,
+                'etablissement_type' => $demande->etablissement_type_id,
                 'user_id' => $demande->user_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            return redirect()->route('demande.index')->with('warning', 'Demande créée avec succès, mais l\'accusé de réception n\'a pas pu être envoyé en raison d\'un problème de connexion. Votre demande sera traitée dès que possible.');
+            return redirect()->route('demande.index')->with('warning', 'Demande créée avec succès, mais l\'accusé de réception n\'a pas pu être envoyé en raison d\'un problème de connexion.');
         }
 
         return redirect()->route('demande.index')->with('success', 'Demande créée avec succès et l\'accusé de réception a été envoyé.');
     }
 
     // Transfert d'une demande à un autre utilisateur
-    public function transfer(Request $request, $demandeId)
+    public function transfer(Request $request, $id)
     {
-        $demande = Demande::findOrFail($demandeId);
-        $utilisateurId = $request->input('utilisateur');
-        $nouvelUtilisateur = User::findOrFail($utilisateurId);
-        $demande->utilisateur_id = $nouvelUtilisateur->id;
-        $demande->save();
+        $demande = Demande::findOrFail($id);
+        $validatedData = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
 
-        return redirect()->back()->with('success', 'Demande transférée avec succès à '.$nouvelUtilisateur->name);
+        $demande->update(['user_id' => $validatedData['user_id']]);
+
+        return redirect()->route('demande.show', $demande->id)->with('success', 'Demande transférée avec succès.');
     }
-     // Méthode pour l'analyse flexible des demandes
-     public function flexibleAnalysis(Request $request)
-     {
-         // Récupérer les régions et les préfectures pour les options de sélection
-         $regions = Region::pluck('name', 'id');
-         $prefectures = Prefecture::pluck('name', 'id');
 
-         // Récupérer les paramètres de la requête
-         $regionId = $request->input('region_id');
-         $prefectureId = $request->input('prefecture_id');
+    // Méthode pour annuler une demande
+    public function cancel(Request $request, $id)
+    {
+        $demande = Demande::findOrFail($id);
+        $demande->update(['status' => 'annulée']);
 
-         // Construire la requête en fonction des critères sélectionnés
-         $query = Demande::query();
+        return redirect()->route('demande.show', $demande->id)->with('success', 'Demande annulée avec succès.');
+    }
 
-         if ($regionId) {
-             $query->where('region_id', $regionId);
-         }
+    // Méthode pour archiver une demande
+    public function archive(Request $request, $id)
+    {
+        $demande = Demande::findOrFail($id);
+        $demande->update(['status' => 'archivée']);
 
-         if ($prefectureId) {
-             $query->where('prefecture_id', $prefectureId);
-         }
+        return redirect()->route('demande.show', $demande->id)->with('success', 'Demande archivée avec succès.');
+    }
 
-         // Exécuter la requête
-         $demandes = $query->paginate(10);
+    // Ajout d'un commentaire à une demande
+    public function addComment(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'commentaire' => 'required|string|max:1000',
+        ]);
 
-         // Retourner la vue avec les données nécessaires
-         return view('admin.flexible_analysis', compact('demandes', 'regions', 'prefectures', 'regionId', 'prefectureId'));
-     }
+        $comment = new Comment([
+            'commentaire' => $validatedData['commentaire'],
+            'user_id' => Auth::id(),
+        ]);
 
-     public function analyseEtapes()
-     {
-         try {
-             // Récupérer les données des étapes de processus depuis la base de données
-             $etapes = EtapeProcessus::all();
+        $demande = Demande::findOrFail($id);
+        $demande->comments()->save($comment);
 
-             // Initialiser les tableaux pour stocker les différentes données
-             $dureesMoyennes = [];
-             $status = [];
-             $retards = [];
-             $tauxReussite = [];
-
-             // Calculer les différentes données pour chaque étape
-             foreach ($etapes as $etape) {
-                 // Récupérer les données de l'étape
-                 $etapeName = $etape->etape;
-                 $duree = $etape->duree;
-                 $status[$etapeName] = $etape->status;
-                 $retards[$etapeName] = $etape->retard;
-
-                 // Calculer le taux de réussite (hypothétique ici)
-                 // Vous devez implémenter votre propre logique pour calculer le taux de réussite
-                 // Ici, je l'ai mis à 0 pour un exemple, vous devez l'adapter à votre application
-                 $tauxReussite[$etapeName] = 0;
-
-                 // Stocker la durée moyenne pour cette étape dans le tableau
-                 $dureesMoyennes[$etapeName] = $duree;
-             }
-
-             // Passer les données à la vue pour affichage
-             return view('admin.demande.etapes', [
-                 'dureesMoyennes' => $dureesMoyennes,
-                 'statuts' => $status, // Assurez-vous de passer $status sous le nom 'statuts'
-                 'retards' => $retards,
-                 'tauxReussite' => $tauxReussite,
-                 'nombreTotalEtapes' => count($etapes), // Vous pouvez utiliser count() pour obtenir le nombre total d'étapes
-                 // Autres données nécessaires à transmettre à la vue...
-             ]);
-         } catch (\Exception $e) {
-             // En cas d'erreur, afficher un message d'erreur
-             return back()->withError("Une erreur s'est produite lors de l'analyse des étapes.");
-         }
-     }
-
-
-
+        return redirect()->route('demande.show', $demande->id)->with('success', 'Commentaire ajouté avec succès.');
+    }
 }
-
