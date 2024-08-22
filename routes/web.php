@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemandeController;
 use App\Http\Controllers\EtablissementTypeController;
 use App\Http\Controllers\PrefectureController;
 use App\Http\Controllers\PublicController;
@@ -67,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::post('/demande/submit', [RequestController::class, 'submit'])->name('demande.submit');
     Route::put('/requests/{id}', [RequestController::class, 'update'])->name('requests.update');
+    Route::resource('demandes', DemandeController::class);
 });
 
 // Routes pour traiter et commenter les demandes

@@ -243,30 +243,49 @@
                                                         <label for="region_id">Région *</label>
                                                         <select class="form-control" id="region_id" name="region_id" required>
                                                             <option value="" disabled selected>Sélectionner une région</option>
-                                                            @foreach($regions as $region)
-                                                                <option value="{{ $region->id }}">{{ $region->name }}</option>
-                                                            @endforeach
+                                                            @if($regions && count($regions) > 0)
+                                                                @foreach($regions as $region)
+                                                                    <option value="{{ $region->id }}">{{ $region->nom}}</option>
+                                                                @endforeach
+                                                            @endif
                                                         </select>
                                                     </div>
+
                                                     <div class="col-sm-3 mb-3">
                                                         <label for="prefecture_id">Préfecture *</label>
                                                         <select class="form-control" id="prefecture_id" name="prefecture_id" required>
                                                             <option value="" disabled selected>Sélectionner une préfecture</option>
-                                                            @foreach($prefectures as $prefecture)
-                                                                <option value="{{ $prefecture->id }}">{{ $prefecture->name }}</option>
-                                                            @endforeach
+                                                            @if($prefectures && count($prefectures) > 0)
+                                                                @foreach($prefectures as $prefecture)
+                                                                    <option value="{{ $prefecture->id }}">{{ $prefecture->name }}</option>
+                                                                @endforeach
+                                                            @endif
                                                         </select>
                                                     </div>
-                                                    <div class="col-sm-3 mb-3 mb-sm-0">
-                                                        <label for="site">Site souhaité</label>
-                                                        <input type="text" class="form-control" id="site" name="site">
+
+                                                    <div class="col-sm-3 mb-3">
+                                                        <label for="request_type_id">Type de demande *</label>
+                                                        <select class="form-control" id="request_type_id" name="request_type_id" required>
+                                                            @if($requestTypes && count($requestTypes) > 0)
+                                                                @foreach($requestTypes as $requestType)
+                                                                    <option value="{{ $requestType->id }}">{{ $requestType->name }}</option>
+                                                                @endforeach
+                                                            @endif
+                                                        </select>
                                                     </div>
 
-                                                    <div class="col-sm-3 mb-3 mb-sm-0">
-                                                        <label for="etape">Étape *</label>
-                                                        <input type="text" class="form-control" id="etape" name="etape" value="Prétraitement" required>
+                                                    <div class="col-sm-3 mb-3">
+                                                        <label for="etablissement_type_id">Type d'établissement *</label>
+                                                        <select class="form-control" id="etablissement_type_id" name="etablissement_type_id" required>
+                                                            @if($etablissementTypes && count($etablissementTypes) > 0)
+                                                                @foreach($etablissementTypes as $etablissementType)
+                                                                    <option value="{{ $etablissementType->id }}">{{ $etablissementType->name }}</option>
+                                                                @endforeach
+                                                            @endif
+                                                        </select>
                                                     </div>
                                                 </div>
+
 
                                                 <div class="form-group row">
                                                     <div class="col-sm-3 mb-3 mb-sm-0">

@@ -24,11 +24,13 @@ class RequestController extends Controller
 
     public function __construct()
     {
-        $this->middleware('auth');
+        // $this->Route::middleware(['middleware'])->group(function () {
 
-        // Assurez-vous que les modèles Region et Prefecture existent et sont correctement importés.
-        $this->regions = Region::pluck('name', 'id');
-        $this->prefectures = Prefecture::pluck('name', 'id');
+        // });('auth');
+
+        // // Assurez-vous que les modèles Region et Prefecture existent et sont correctement importés.
+        // $this->regions = Region::pluck('name', 'id');
+        // $this->prefectures = Prefecture::pluck('name', 'id');
     }
 
 
